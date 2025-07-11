@@ -496,6 +496,20 @@
             font-size: 14px;
         }
         
+        .parameter-band-select {
+            width: 60px;
+            padding: 0 4px;
+        }
+        
+        .parameter-band-select select {
+            background: #333;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            font-size: 11px;
+            width: 100%;
+            border-radius: 3px;
+        }
+        
         .parameter-timeline {
             position: relative;
             flex: 1;
@@ -735,6 +749,7 @@
                         <div style="flex: 1;"></div>
                         <button class="playback-button" onclick="exportJSON()">Export JSON</button>
                         <button class="playback-button" onclick="exportFrames()">Export Frames</button>
+                        <button class="playback-button" onclick="exportMP4()">Export MP4</button>
                     </div>
                 </div>
                 <div class="panel-divider" id="panelDivider"></div>
@@ -919,6 +934,57 @@
                         </div>
                     </div>
                     
+                    <!-- Ripple Effect Section -->
+                    <div class="parameter-section" id="rippleSection">
+                        <div class="section-header" onclick="toggleSection('rippleSection')">
+                            <span class="section-arrow">▼</span>
+                            <span class="section-title">Ripple Effect</span>
+                        </div>
+                        <div class="section-content">
+                            <div class="parameter-row">
+                                <div class="parameter-label">
+                                    <input type="checkbox" id="rippleEnabled" class="parameter-checkbox">
+                                    <span>Enable Ripple</span>
+                                </div>
+                                <div class="parameter-value-control">
+                                    <input type="checkbox" id="rippleLoop" style="margin-right: 8px;">
+                                    <label for="rippleLoop" style="font-size: 11px; color: #999;">Loop</label>
+                                </div>
+                                <div class="parameter-timeline"></div>
+                            </div>
+                            <div class="parameter-row">
+                                <div class="parameter-label">Ripple Amplitude</div>
+                                <div class="parameter-value-control">
+                                    <div class="parameter-value-field" id="rippleAmpValue" data-param="rippleAmp" data-min="0" data-max="200" data-step="1">50</div>
+                                </div>
+                                <button class="keyframe-button" id="rippleAmpKey" onclick="toggleKeyframe('rippleAmp')"></button>
+                                <div class="parameter-timeline">
+                                    <div class="parameter-track" data-param="rippleAmp"></div>
+                                </div>
+                            </div>
+                            <div class="parameter-row">
+                                <div class="parameter-label">Ripple Frequency</div>
+                                <div class="parameter-value-control">
+                                    <div class="parameter-value-field" id="rippleFreqValue" data-param="rippleFreq" data-min="0.1" data-max="10" data-step="0.1">2</div>
+                                </div>
+                                <button class="keyframe-button" id="rippleFreqKey" onclick="toggleKeyframe('rippleFreq')"></button>
+                                <div class="parameter-timeline">
+                                    <div class="parameter-track" data-param="rippleFreq"></div>
+                                </div>
+                            </div>
+                            <div class="parameter-row">
+                                <div class="parameter-label">Ripple Speed</div>
+                                <div class="parameter-value-control">
+                                    <div class="parameter-value-field" id="rippleSpeedValue" data-param="rippleSpeed" data-min="0" data-max="5" data-step="0.1">1</div>
+                                </div>
+                                <button class="keyframe-button" id="rippleSpeedKey" onclick="toggleKeyframe('rippleSpeed')"></button>
+                                <div class="parameter-timeline">
+                                    <div class="parameter-track" data-param="rippleSpeed"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Audio Reactive Section -->
                     <div class="parameter-section" id="audioSection">
                         <div class="section-header" onclick="toggleSection('audioSection')">
@@ -948,6 +1014,14 @@
                                     <div class="parameter-value-field" id="audioModSizeValue" data-param="audioModSize" data-min="0" data-max="10" data-step="0.1">0</div>
                                 </div>
                                 <button class="keyframe-button" id="audioModSizeKey" onclick="toggleKeyframe('audioModSize')"></button>
+                                <div class="parameter-band-select">
+                                    <select id="audioBandSize">
+                                        <option>Full</option>
+                                        <option>Low</option>
+                                        <option>Mid</option>
+                                        <option>High</option>
+                                    </select>
+                                </div>
                                 <div class="parameter-timeline">
                                     <div class="parameter-track" data-param="audioModSize"></div>
                                 </div>
@@ -958,6 +1032,14 @@
                                     <div class="parameter-value-field" id="audioModWaveValue" data-param="audioModWave" data-min="0" data-max="10" data-step="0.1">1</div>
                                 </div>
                                 <button class="keyframe-button" id="audioModWaveKey" onclick="toggleKeyframe('audioModWave')"></button>
+                                <div class="parameter-band-select">
+                                    <select id="audioBandWave">
+                                        <option>Full</option>
+                                        <option>Low</option>
+                                        <option>Mid</option>
+                                        <option>High</option>
+                                    </select>
+                                </div>
                                 <div class="parameter-timeline">
                                     <div class="parameter-track" data-param="audioModWave"></div>
                                 </div>
@@ -968,6 +1050,14 @@
                                     <div class="parameter-value-field" id="audioModNoiseValue" data-param="audioModNoise" data-min="0" data-max="10" data-step="0.1">0</div>
                                 </div>
                                 <button class="keyframe-button" id="audioModNoiseKey" onclick="toggleKeyframe('audioModNoise')"></button>
+                                <div class="parameter-band-select">
+                                    <select id="audioBandNoise">
+                                        <option>Full</option>
+                                        <option>Low</option>
+                                        <option>Mid</option>
+                                        <option>High</option>
+                                    </select>
+                                </div>
                                 <div class="parameter-timeline">
                                     <div class="parameter-track" data-param="audioModNoise"></div>
                                 </div>
@@ -978,8 +1068,34 @@
                                     <div class="parameter-value-field" id="audioModRandomValue" data-param="audioModRandom" data-min="0" data-max="10" data-step="0.1">0</div>
                                 </div>
                                 <button class="keyframe-button" id="audioModRandomKey" onclick="toggleKeyframe('audioModRandom')"></button>
+                                <div class="parameter-band-select">
+                                    <select id="audioBandRandom">
+                                        <option>Full</option>
+                                        <option>Low</option>
+                                        <option>Mid</option>
+                                        <option>High</option>
+                                    </select>
+                                </div>
                                 <div class="parameter-timeline">
                                     <div class="parameter-track" data-param="audioModRandom"></div>
+                                </div>
+                            </div>
+                            <div class="parameter-row">
+                                <div class="parameter-label">Audio Mod Ripple</div>
+                                <div class="parameter-value-control">
+                                    <div class="parameter-value-field" id="audioModRippleValue" data-param="audioModRipple" data-min="0" data-max="10" data-step="0.1">0</div>
+                                </div>
+                                <button class="keyframe-button" id="audioModRippleKey" onclick="toggleKeyframe('audioModRipple')"></button>
+                                <div class="parameter-band-select">
+                                    <select id="audioBandRipple">
+                                        <option>Full</option>
+                                        <option>Low</option>
+                                        <option>Mid</option>
+                                        <option>High</option>
+                                    </select>
+                                </div>
+                                <div class="parameter-timeline">
+                                    <div class="parameter-track" data-param="audioModRipple"></div>
                                 </div>
                             </div>
                         </div>
@@ -1096,15 +1212,21 @@
     <input type="range" id="noiseStrength" min="0" max="100" value="30" style="display: none;">
     <input type="range" id="noiseSpeed" min="0" max="2" value="0.5" step="0.1" style="display: none;">
     <input type="range" id="randomStrength" min="0" max="50" value="10" style="display: none;">
+    <input type="range" id="rippleAmp" min="0" max="200" value="50" style="display: none;">
+    <input type="range" id="rippleFreq" min="0.1" max="10" value="2" step="0.1" style="display: none;">
+    <input type="range" id="rippleSpeed" min="0" max="5" value="1" step="0.1" style="display: none;">
     <input type="range" id="audioModSize" min="0" max="10" value="0" step="0.1" style="display: none;">
     <input type="range" id="audioModWave" min="0" max="10" value="1" step="0.1" style="display: none;">
     <input type="range" id="audioModNoise" min="0" max="10" value="0" step="0.1" style="display: none;">
     <input type="range" id="audioModRandom" min="0" max="10" value="0" step="0.1" style="display: none;">
+    <input type="range" id="audioModRipple" min="0" max="10" value="0" step="0.1" style="display: none;">
     
     <input type="file" id="audioInput" accept="audio/*" style="display: none;">
     
     <!-- Load JSZip from CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Load mp4-muxer from CDN -->
+    <script src="https://unpkg.com/mp4-muxer/build/mp4-muxer.js"></script>
     
     <script>
         // Wrap in IIFE to avoid global scope conflicts
@@ -1285,6 +1407,41 @@
                 }
             }
             
+            // Simple FFT implementation from gist.github.com/pschichtel/2a3f0dcc14678d75ba345595c276b607
+            function fft(signal) {
+                const n = signal.length;
+                if (n <= 1) return signal;
+                
+                const even = [];
+                const odd = [];
+                for (let i = 0; i < n; i += 2) {
+                    even.push(signal[i]);
+                    if (i + 1 < n) odd.push(signal[i + 1]);
+                }
+                
+                const evenFFT = fft(even);
+                const oddFFT = fft(odd);
+                
+                const result = new Array(n);
+                for (let k = 0; k < n / 2; k++) {
+                    const theta = -2 * Math.PI * k / n;
+                    const re = Math.cos(theta);
+                    const im = Math.sin(theta);
+                    
+                    const oddRe = (k < oddFFT.length ? oddFFT[k].re : 0) * re - (k < oddFFT.length ? oddFFT[k].im : 0) * im;
+                    const oddIm = (k < oddFFT.length ? oddFFT[k].re : 0) * im + (k < oddFFT.length ? oddFFT[k].im : 0) * re;
+                    
+                    result[k] = { re: evenFFT[k].re + oddRe, im: evenFFT[k].im + oddIm };
+                    result[k + n / 2] = { re: evenFFT[k].re - oddRe, im: evenFFT[k].im - oddIm };
+                }
+                
+                return result;
+            }
+            
+            function nextPowerOf2(n) {
+                return Math.pow(2, Math.ceil(Math.log2(n)));
+            }
+            
             // Perlin noise implementation
             class PerlinNoise {
                 constructor() {
@@ -1413,6 +1570,7 @@
             let audioBuffer = null;
             let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             let audioSource = null;
+            let radius = Math.hypot(canvasWidth/2, canvasHeight/2);
             
             // Keyframe tracks map
             const keyframeTracks = {
@@ -1424,10 +1582,14 @@
                 noiseScale: new KeyframeTrack('Noise Scale', 'noiseScale', 0.001, 0.1),
                 noiseSpeed: new KeyframeTrack('Noise Speed', 'noiseSpeed', 0, 2),
                 randomStrength: new KeyframeTrack('Random Strength', 'randomStrength', 0, 50),
+                rippleAmp: new KeyframeTrack('Ripple Amplitude', 'rippleAmp', 0, 200),
+                rippleFreq: new KeyframeTrack('Ripple Frequency', 'rippleFreq', 0.1, 10),
+                rippleSpeed: new KeyframeTrack('Ripple Speed', 'rippleSpeed', 0, 5),
                 audioModSize: new KeyframeTrack('Audio Mod Size', 'audioModSize', 0, 10),
                 audioModWave: new KeyframeTrack('Audio Mod Wave', 'audioModWave', 0, 10),
                 audioModNoise: new KeyframeTrack('Audio Mod Noise', 'audioModNoise', 0, 10),
-                audioModRandom: new KeyframeTrack('Audio Mod Random', 'audioModRandom', 0, 10)
+                audioModRandom: new KeyframeTrack('Audio Mod Random', 'audioModRandom', 0, 10),
+                audioModRipple: new KeyframeTrack('Audio Mod Ripple', 'audioModRipple', 0, 10)
             };
             
             class Particle {
@@ -1458,65 +1620,78 @@
                     const noiseStrengthBase = keyframeTracks.noiseStrength.getValueAtTime(time);
                     const noiseSpeed = keyframeTracks.noiseSpeed.getValueAtTime(time);
                     const randomStrengthBase = keyframeTracks.randomStrength.getValueAtTime(time);
+                    const rippleAmpBase = keyframeTracks.rippleAmp.getValueAtTime(time);
+                    const rippleFreq = keyframeTracks.rippleFreq.getValueAtTime(time);
+                    const rippleSpeed = keyframeTracks.rippleSpeed.getValueAtTime(time);
                     
-                    let rms = 0;
-                    if (document.getElementById('audioEnabled').checked && audioFeatures[frame]) {
-                        rms = audioFeatures[frame];
-                    }
+                    const features = audioFeatures[frame] || {full: 0, low: 0, mid: 0, high: 0};
                     
                     const audioModSize = keyframeTracks.audioModSize.getValueAtTime(time);
                     const audioModWave = keyframeTracks.audioModWave.getValueAtTime(time);
                     const audioModNoise = keyframeTracks.audioModNoise.getValueAtTime(time);
                     const audioModRandom = keyframeTracks.audioModRandom.getValueAtTime(time);
+                    const audioModRipple = keyframeTracks.audioModRipple.getValueAtTime(time);
                     
                     const isAdditive = document.getElementById('audioAdditive').checked;
                     
+                    const getRms = (modName) => {
+                        const bandSelect = document.getElementById('audioBand' + modName);
+                        const band = bandSelect ? bandSelect.value.toLowerCase() : 'full';
+                        return features[band];
+                    };
+                    
                     let waveAmp;
+                    const rmsWave = getRms('Wave');
                     if (isAdditive) {
-                        waveAmp = waveAmpBase + (rms * audioModWave * 20);
+                        waveAmp = waveAmpBase + (rmsWave * audioModWave * 20);
                         waveAmp = Math.max(0, Math.min(200, waveAmp));
                     } else {
-                        waveAmp = waveAmpBase * (1 + rms * audioModWave);
+                        waveAmp = waveAmpBase * (1 + rmsWave * audioModWave);
                     }
                     
                     let noiseStrength;
+                    const rmsNoise = getRms('Noise');
                     if (isAdditive) {
-                        noiseStrength = noiseStrengthBase + (rms * audioModNoise * 10);
+                        noiseStrength = noiseStrengthBase + (rmsNoise * audioModNoise * 10);
                         noiseStrength = Math.max(0, Math.min(100, noiseStrength));
                     } else {
-                        noiseStrength = noiseStrengthBase * (1 + rms * audioModNoise);
+                        noiseStrength = noiseStrengthBase * (1 + rmsNoise * audioModNoise);
                     }
                     
                     let randomStrength;
+                    const rmsRandom = getRms('Random');
                     if (isAdditive) {
-                        randomStrength = randomStrengthBase + (rms * audioModRandom * 5);
+                        randomStrength = randomStrengthBase + (rmsRandom * audioModRandom * 5);
                         randomStrength = Math.max(0, Math.min(50, randomStrength));
                     } else {
-                        randomStrength = randomStrengthBase * (1 + rms * audioModRandom);
+                        randomStrength = randomStrengthBase * (1 + rmsRandom * audioModRandom);
+                    }
+                    
+                    let rippleAmp;
+                    const rmsRipple = getRms('Ripple');
+                    if (isAdditive) {
+                        rippleAmp = rippleAmpBase + (rmsRipple * audioModRipple * 20);
+                        rippleAmp = Math.max(0, Math.min(200, rippleAmp));
+                    } else {
+                        rippleAmp = rippleAmpBase * (1 + rmsRipple * audioModRipple);
                     }
                     
                     // Wave motion
                     if (document.getElementById('waveEnabled').checked) {
                         const waveLoop = document.getElementById('waveLoop').checked;
                         
+                        let phaseX, phaseY;
                         if (waveLoop) {
-                            // Looping wave: ensures seamless loop by using full cycles
-                            const cycles = Math.floor(waveSpeed); // Number of complete cycles
-                            const adjustedSpeed = cycles > 0 ? cycles : 1; // At least 1 cycle
-                            
-                            const waveX = Math.sin((this.baseY / canvasHeight) * Math.PI * waveFreq + t * adjustedSpeed * Math.PI * 2) * waveAmp;
-                            const waveY = Math.sin((this.baseX / canvasWidth) * Math.PI * waveFreq + t * adjustedSpeed * Math.PI * 2) * waveAmp * 0.5;
-                            
-                            this.x += waveX;
-                            this.y += waveY;
+                            const cycles = Math.floor(waveSpeed) || 1;
+                            const adjustedSpeed = cycles;
+                            phaseX = Math.sin((this.baseY / canvasHeight) * Math.PI * waveFreq + t * adjustedSpeed * Math.PI * 2) * waveAmp;
+                            phaseY = Math.sin((this.baseX / canvasWidth) * Math.PI * waveFreq + t * adjustedSpeed * Math.PI * 2) * waveAmp * 0.5;
                         } else {
-                            // Non-looping wave: continuous progression
-                            const waveX = Math.sin((this.baseY / canvasHeight) * Math.PI * waveFreq + time * waveSpeed * Math.PI * 2) * waveAmp;
-                            const waveY = Math.sin((this.baseX / canvasWidth) * Math.PI * waveFreq + time * waveSpeed * Math.PI * 2) * waveAmp * 0.5;
-                            
-                            this.x += waveX;
-                            this.y += waveY;
+                            phaseX = Math.sin((this.baseY / canvasHeight) * Math.PI * waveFreq + time * waveSpeed * Math.PI * 2) * waveAmp;
+                            phaseY = Math.sin((this.baseX / canvasWidth) * Math.PI * waveFreq + time * waveSpeed * Math.PI * 2) * waveAmp * 0.5;
                         }
+                        this.x += phaseX;
+                        this.y += phaseY;
                     }
                     
                     // Perlin noise
@@ -1525,43 +1700,36 @@
                         
                         let noiseTime = time * noiseSpeed;
                         
-                        // If looping is enabled, create seamless loop
+                        let noiseX, noiseY;
                         if (noiseLoop) {
-                            const loopProgress = t; // 0 to 1 over the animation
+                            const loopProgress = t;
                             const angle = loopProgress * Math.PI * 2;
-                            
-                            // Use circular interpolation for seamless looping
                             const radius = noiseSpeed;
                             const timeX = Math.cos(angle) * radius;
                             const timeY = Math.sin(angle) * radius;
                             
-                            const noiseX = perlin.noise(
+                            noiseX = perlin.noise(
                                 this.baseX * noiseScale + timeX,
                                 this.baseY * noiseScale + timeY
                             ) * noiseStrength;
                             
-                            const noiseY = perlin.noise(
+                            noiseY = perlin.noise(
                                 this.baseX * noiseScale + 100 + timeX,
                                 this.baseY * noiseScale + 100 + timeY
                             ) * noiseStrength;
-                            
-                            this.x += noiseX;
-                            this.y += noiseY;
                         } else {
-                            // Regular non-looping noise
-                            const noiseX = perlin.noise(
+                            noiseX = perlin.noise(
                                 this.baseX * noiseScale,
                                 this.baseY * noiseScale + noiseTime
                             ) * noiseStrength;
                             
-                            const noiseY = perlin.noise(
+                            noiseY = perlin.noise(
                                 this.baseX * noiseScale + 100,
                                 this.baseY * noiseScale + noiseTime
                             ) * noiseStrength;
-                            
-                            this.x += noiseX;
-                            this.y += noiseY;
                         }
+                        this.x += noiseX;
+                        this.y += noiseY;
                     }
                     
                     // Random motion
@@ -1572,31 +1740,59 @@
                         this.x += randomX;
                         this.y += randomY;
                     }
+                    
+                    // Ripple effect
+                    if (document.getElementById('rippleEnabled').checked) {
+                        const rippleLoop = document.getElementById('rippleLoop').checked;
+                        const centerX = canvasWidth / 2;
+                        const centerY = canvasHeight / 2;
+                        const dx = this.baseX - centerX;
+                        const dy = this.baseY - centerY;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 0) {
+                            const angle = Math.atan2(dy, dx);
+                            let phase;
+                            if (rippleLoop) {
+                                const cycles = Math.floor(rippleSpeed) || 1;
+                                const adjustedSpeed = cycles;
+                                phase = Math.sin((dist / radius) * Math.PI * 2 * rippleFreq + t * adjustedSpeed * Math.PI * 2) * rippleAmp;
+                            } else {
+                                phase = Math.sin((dist / radius) * Math.PI * 2 * rippleFreq + time * rippleSpeed * Math.PI * 2) * rippleAmp;
+                            }
+                            this.x += Math.cos(angle) * phase;
+                            this.y += Math.sin(angle) * phase;
+                        }
+                    }
                 }
                 
-                draw() {
+                draw(context) {
                     const t = currentFrame / totalFrames;
                     const time = t * duration;
                     const particleSizeBase = keyframeTracks.particleSize.getValueAtTime(time);
-                    let rms = 0;
-                    if (document.getElementById('audioEnabled').checked && audioFeatures[currentFrame]) {
-                        rms = audioFeatures[currentFrame];
-                    }
+                    const features = audioFeatures[currentFrame] || {full: 0, low: 0, mid: 0, high: 0};
                     const audioModSize = keyframeTracks.audioModSize.getValueAtTime(time);
                     const isAdditive = document.getElementById('audioAdditive').checked;
+                    const rmsSize = getRms('Size');
                     let size;
                     if (isAdditive) {
-                        size = particleSizeBase + (rms * audioModSize * 2);
+                        size = particleSizeBase + (rmsSize * audioModSize * 2);
                         size = Math.max(1, Math.min(20, size));
                     } else {
-                        size = particleSizeBase * (1 + rms * audioModSize);
+                        size = particleSizeBase * (1 + rmsSize * audioModSize);
                     }
                     const color = document.getElementById('particleColor').value;
-                    ctx.fillStyle = color;
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, size, 0, Math.PI * 2);
-                    ctx.fill();
+                    context.fillStyle = color;
+                    context.beginPath();
+                    context.arc(this.x, this.y, size, 0, Math.PI * 2);
+                    context.fill();
                 }
+            }
+            
+            function getRms(modName) {
+                const bandSelect = document.getElementById('audioBand' + modName);
+                const band = bandSelect ? bandSelect.value.toLowerCase() : 'full';
+                const features = audioFeatures[currentFrame] || {full: 0, low: 0, mid: 0, high: 0};
+                return document.getElementById('audioEnabled').checked ? features[band] : 0;
             }
             
             window.updateCanvasSettings = function() {
@@ -1611,6 +1807,8 @@
                 canvas.height = canvasHeight;
                 
                 document.getElementById('totalFrames').textContent = totalFrames;
+                
+                radius = Math.hypot(canvasWidth/2, canvasHeight/2);
                 
                 updateGrid();
                 resetAnimation();
@@ -1651,7 +1849,7 @@
                 
                 particles.forEach(particle => {
                     particle.update(currentFrame);
-                    particle.draw();
+                    particle.draw(ctx);
                 });
                 
                 document.getElementById('frameCount').textContent = currentFrame;
@@ -1670,7 +1868,7 @@
                     if (valueDisplay) {
                         if (paramId === 'noiseScale') {
                             valueDisplay.textContent = value.toFixed(3);
-                        } else if (paramId === 'waveFreq' || paramId === 'waveSpeed' || paramId === 'noiseSpeed' || paramId === 'particleSize' || paramId.includes('audioMod')) {
+                        } else if (paramId === 'waveFreq' || paramId === 'waveSpeed' || paramId === 'noiseSpeed' || paramId === 'particleSize' || paramId.includes('audioMod') || paramId === 'rippleFreq' || paramId === 'rippleSpeed') {
                             valueDisplay.textContent = value.toFixed(1);
                         } else {
                             valueDisplay.textContent = Math.round(value);
@@ -1866,6 +2064,7 @@ Effects:
 - Wave: ${document.getElementById('waveEnabled').checked ? 'Enabled' : 'Disabled'}
 - Perlin Noise: ${document.getElementById('noiseEnabled').checked ? 'Enabled' : 'Disabled'}
 - Random: ${document.getElementById('randomEnabled').checked ? 'Enabled' : 'Disabled'}
+- Ripple: ${document.getElementById('rippleEnabled').checked ? 'Enabled' : 'Disabled'}
 
 Created with Particle Grid Animator 
 https://nathanshipley.github.io/particleGridAnimator/
@@ -1903,6 +2102,108 @@ https://www.nathanshipley.com/`;
                 } catch (error) {
                     console.error('Error exporting frames:', error);
                     alert('Error exporting frames. Please try again.');
+                    document.body.removeChild(progressDiv);
+                    currentFrame = originalFrame;
+                    render();
+                }
+            }
+            
+            window.exportMP4 = async function() {
+                if (!('VideoEncoder' in window)) {
+                    alert('Your browser does not support the WebCodecs API required for MP4 export.');
+                    return;
+                }
+                
+                // Create progress indicator
+                const progressDiv = document.createElement('div');
+                progressDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 8px; z-index: 10000;';
+                progressDiv.innerHTML = '<h3>Exporting MP4...</h3><p id="exportProgress">Preparing...</p>';
+                document.body.appendChild(progressDiv);
+                
+                try {
+                    const offscreen = new OffscreenCanvas(canvasWidth, canvasHeight);
+                    const offCtx = offscreen.getContext('2d', {
+                        willReadFrequently: true,
+                        desynchronized: true
+                    });
+                    
+                    const originalFrame = currentFrame;
+                    
+                    let muxer = new Mp4Muxer.Muxer({
+                        target: new Mp4Muxer.ArrayBufferTarget(),
+                        video: {
+                            codec: 'avc',
+                            width: canvasWidth,
+                            height: canvasHeight
+                        },
+                        fastStart: 'in-memory'
+                    });
+                    
+                    let videoEncoder = new VideoEncoder({
+                        output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+                        error: (e) => {
+                            console.error(e);
+                            alert('Error during video encoding: ' + e.message);
+                        }
+                    });
+                    
+                    videoEncoder.configure({
+                        codec: 'avc1.42001f',
+                        width: canvasWidth,
+                        height: canvasHeight,
+                        bitrate: 1_000_000,  // Adjust as needed
+                        bitrateMode: 'constant'
+                    });
+                    
+                    for (let frame = 0; frame < totalFrames; frame++) {
+                        document.getElementById('exportProgress').textContent = `Processing frame ${frame + 1} of ${totalFrames}`;
+                        
+                        currentFrame = frame;
+                        
+                        const bgColor = document.getElementById('backgroundColor').value;
+                        offCtx.fillStyle = bgColor;
+                        offCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+                        
+                        particles.forEach(particle => {
+                            particle.update(frame);
+                            particle.draw(offCtx);
+                        });
+                        
+                        let videoFrame = new VideoFrame(offscreen, {
+                            timestamp: (frame * 1e6) / fps
+                        });
+                        
+                        videoEncoder.encode(videoFrame);
+                        
+                        videoFrame.close();
+                        
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                    
+                    await videoEncoder.flush();
+                    
+                    muxer.finalize();
+                    
+                    let buffer = muxer.target.buffer;
+                    let blob = new Blob([buffer], {type: 'video/mp4'});
+                    
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'particle_animation.mp4';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    currentFrame = originalFrame;
+                    render();
+                    
+                    document.body.removeChild(progressDiv);
+                    
+                } catch (error) {
+                    console.error('Error exporting MP4:', error);
+                    alert('Error exporting MP4. Please check console for details.');
                     document.body.removeChild(progressDiv);
                     currentFrame = originalFrame;
                     render();
@@ -2481,6 +2782,10 @@ https://www.nathanshipley.com/`;
                 input.addEventListener('change', render);
             });
             
+            document.querySelectorAll('.parameter-band-select select').forEach(select => {
+                select.addEventListener('change', render);
+            });
+            
             // Keyboard shortcuts
             document.addEventListener('keydown', (e) => {
                 if (e.target.tagName === 'INPUT' && e.target.type === 'text') return;
@@ -2544,22 +2849,64 @@ https://www.nathanshipley.com/`;
             function computeAudioFeatures(buffer) {
                 const channelData = buffer.getChannelData(0); // Use first channel (mono)
                 const sampleRate = buffer.sampleRate;
-                const samplesPerFrame = sampleRate / fps;
+                const samplesPerFrame = Math.floor(sampleRate / fps);
+                const fftSize = 2048; // Fixed power of 2
                 audioFeatures = [];
                 
                 for (let f = 0; f < totalFrames; f++) {
-                    const start = Math.floor(f * samplesPerFrame);
-                    let end = Math.floor((f + 1) * samplesPerFrame);
+                    const start = f * samplesPerFrame;
+                    let end = (f + 1) * samplesPerFrame;
                     if (start >= channelData.length) break;
                     if (end > channelData.length) end = channelData.length;
-                    
-                    let sum = 0;
-                    for (let s = start; s < end; s++) {
-                        sum += channelData[s] * channelData[s];
-                    }
                     const count = end - start;
-                    const rms = count > 0 ? Math.sqrt(sum / count) : 0;
-                    audioFeatures.push(rms);
+                    
+                    // Time-domain RMS for full
+                    let sumSq = 0;
+                    for (let s = start; s < end; s++) {
+                        sumSq += channelData[s] * channelData[s];
+                    }
+                    const full = count > 0 ? Math.sqrt(sumSq / count) : 0;
+                    
+                    // FFT for bands
+                    const windowData = new Array(fftSize).fill(0);
+                    for (let i = 0; i < count && i < fftSize; i++) {
+                        windowData[i] = channelData[start + i];
+                    }
+                    
+                    const signal = windowData.map(x => ({re: x, im: 0}));
+                    const transform = fft(signal);
+                    
+                    const binWidth = sampleRate / fftSize;
+                    const magnitudes = new Array(fftSize / 2);
+                    for (let k = 0; k < fftSize / 2; k++) {
+                        magnitudes[k] = Math.sqrt(transform[k].re ** 2 + transform[k].im ** 2) / fftSize; // Normalize by fftSize
+                    }
+                    
+                    // Band definitions (Hz)
+                    const lowLow = 20;
+                    const lowHigh = 250;
+                    const midHigh = 4000;
+                    const highHigh = sampleRate / 2;
+                    
+                    const lowStart = Math.ceil(lowLow / binWidth);
+                    const lowEnd = Math.floor(lowHigh / binWidth);
+                    const midEnd = Math.floor(midHigh / binWidth);
+                    const highEnd = Math.floor(highHigh / binWidth);
+                    
+                    function bandRms(startBin, endBin) {
+                        let energy = 0;
+                        for (let k = startBin; k <= endBin; k++) {
+                            energy += magnitudes[k] ** 2;
+                        }
+                        const numBins = endBin - startBin + 1;
+                        return numBins > 0 ? Math.sqrt(energy / numBins) : 0;
+                    }
+                    
+                    const low = bandRms(lowStart, lowEnd);
+                    const mid = bandRms(lowEnd + 1, midEnd);
+                    const high = bandRms(midEnd + 1, highEnd);
+                    
+                    audioFeatures[f] = { full, low, mid, high };
                 }
             }
             
