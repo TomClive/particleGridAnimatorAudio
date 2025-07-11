@@ -675,19 +675,6 @@
             opacity: 1;
         }
         
-        /* Global playhead line */
-        .timeline-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: #ff4444;
-            pointer-events: none;
-            z-index: 15;
-            left: calc(262px + var(--playhead-position));
-            opacity: 0.5;
-        }
     </style>
 </head>
 <body>
@@ -742,12 +729,12 @@
                         <button class="playback-button" onclick="togglePlayback()">▶ Play</button>
                         <button class="playback-button" onclick="resetAnimation()">⟲ Reset</button>
                         <button class="playback-button" onclick="loadAudio()">Load Audio</button>
+                        <button class="playback-button" onclick="openAudioSettings()" disabled id="audioSettingsBtn">Audio Settings</button>
                         <button class="playback-button" onclick="previousFrame()">◀ Prev</button>
                         <button class="playback-button" onclick="nextFrame()">▶ Next</button>
                         <div style="flex: 1;"></div>
                         <button class="playback-button" onclick="exportJSON()">Export JSON</button>
                         <button class="playback-button" onclick="exportFrames()">Export Frames</button>
-                        <button class="playback-button" onclick="exportMP4()">Export MP4</button>
                     </div>
                 </div>
                 <div class="panel-divider" id="panelDivider"></div>
@@ -948,6 +935,14 @@
                                 <div class="parameter-timeline"></div>
                             </div>
                             <div class="parameter-row">
+                                <div class="parameter-label">
+                                    <input type="checkbox" id="audioAdditive" class="parameter-checkbox">
+                                    <span>Additive Mods</span>
+                                </div>
+                                <div class="parameter-value-control"></div>
+                                <div class="parameter-timeline"></div>
+                            </div>
+                            <div class="parameter-row">
                                 <div class="parameter-label">Audio Mod Size</div>
                                 <div class="parameter-value-control">
                                     <div class="parameter-value-field" id="audioModSizeValue" data-param="audioModSize" data-min="0" data-max="10" data-step="0.1">0</div>
@@ -1049,6 +1044,30 @@
             </div>
         </div>
         
+        <!-- Audio Settings Modal -->
+        <div id="audioSettingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Audio Settings</h3>
+                    <button class="modal-close" onclick="closeModal('audioSettingsModal')">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="input-group">
+                        <label for="audioStart">Start Time (seconds)</label>
+                        <input type="number" id="audioStart" value="0" min="0" step="0.1">
+                    </div>
+                    <div class="input-group">
+                        <label for="audioEnd">End Time (seconds, blank for full)</label>
+                        <input type="number" id="audioEnd" min="0" step="0.1">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="playback-button" onclick="applyAudioSettings()">Apply</button>
+                    <button class="playback-button" onclick="closeModal('audioSettingsModal')">Cancel</button>
+                </div>
+            </div>
+        </div>
+        
         <!-- Export Modal -->
         <div id="exportModal" class="modal">
             <div class="modal-content">
@@ -1083,13 +1102,9 @@
     <input type="range" id="audioModRandom" min="0" max="10" value="0" step="0.1" style="display: none;">
     
     <input type="file" id="audioInput" accept="audio/*" style="display: none;">
-    <audio id="audioPlayer" style="display: none;"></audio>
     
     <!-- Load JSZip from CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    
-    <!-- Load mp4-muxer from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@2/build/mp4-muxer.js"></script>
     
     <script>
         // Wrap in IIFE to avoid global scope conflicts
@@ -1114,6 +1129,15 @@
                 document.getElementById('colorSettingsModal').style.display = 'block';
             }
             
+            window.openAudioSettings = function() {
+                if (!audioBuffer) {
+                    alert('Load audio first');
+                    return;
+                }
+                document.getElementById('audioEnd').value = audioBuffer.duration.toFixed(1);
+                document.getElementById('audioSettingsModal').style.display = 'block';
+            }
+            
             window.closeModal = function(modalId) {
                 document.getElementById(modalId).style.display = 'none';
             }
@@ -1126,6 +1150,40 @@
             window.applyColorSettings = function() {
                 render();
                 closeModal('colorSettingsModal');
+            }
+            
+            window.applyAudioSettings = function() {
+                let start = parseFloat(document.getElementById('audioStart').value) || 0;
+                let end = parseFloat(document.getElementById('audioEnd').value) || audioBuffer.duration;
+                if (start < 0 || end <= start || end > audioBuffer.duration) {
+                    alert('Invalid time range');
+                    return;
+                }
+                
+                const sampleRate = audioBuffer.sampleRate;
+                const startSample = Math.floor(start * sampleRate);
+                const endSample = Math.floor(end * sampleRate);
+                const length = endSample - startSample;
+                
+                const newBuffer = new AudioBuffer({
+                    length: length,
+                    numberOfChannels: audioBuffer.numberOfChannels,
+                    sampleRate: sampleRate
+                });
+                
+                for (let i = 0; i < audioBuffer.numberOfChannels; i++) {
+                    const channelData = audioBuffer.getChannelData(i).slice(startSample, endSample);
+                    newBuffer.copyToChannel(channelData, i);
+                }
+                
+                audioBuffer = newBuffer;
+                duration = audioBuffer.duration;
+                document.getElementById('duration').value = duration.toFixed(1);
+                totalFrames = Math.floor(duration * fps);
+                document.getElementById('totalFrames').textContent = totalFrames;
+                computeAudioFeatures(audioBuffer);
+                render();
+                closeModal('audioSettingsModal');
             }
             
             window.updateZoom = function() {
@@ -1214,7 +1272,7 @@
             window.previousFrame = function() {
                 if (currentFrame > 0) {
                     currentFrame--;
-                    syncAudioToFrame();
+                    updateAudioPlayback();
                     render();
                 }
             }
@@ -1222,7 +1280,7 @@
             window.nextFrame = function() {
                 if (currentFrame < totalFrames - 1) {
                     currentFrame++;
-                    syncAudioToFrame();
+                    updateAudioPlayback();
                     render();
                 }
             }
@@ -1278,6 +1336,14 @@
                 }
             }
             
+            // Easing functions
+            const easingFunctions = {
+                linear: (t) => t,
+                easeInQuad: (t) => t * t,
+                easeOutQuad: (t) => t * (2 - t),
+                easeInOutQuad: (t) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
+            };
+            
             // Keyframe system
             class KeyframeTrack {
                 constructor(name, paramId, min, max) {
@@ -1291,7 +1357,7 @@
                 addKeyframe(time, value) {
                     // Remove any existing keyframe at this time
                     this.keyframes = this.keyframes.filter(kf => Math.abs(kf.time - time) > 0.01);
-                    this.keyframes.push({ time, value });
+                    this.keyframes.push({ time, value, easing: 'linear' });
                     this.keyframes.sort((a, b) => a.time - b.time);
                 }
                 
@@ -1318,7 +1384,8 @@
                             const k1 = this.keyframes[i];
                             const k2 = this.keyframes[i + 1];
                             const t = (time - k1.time) / (k2.time - k1.time);
-                            return k1.value + (k2.value - k1.value) * t; // Linear interpolation
+                            const easedT = easingFunctions[k1.easing](t);
+                            return k1.value + easedT * (k2.value - k1.value);
                         }
                     }
                     
@@ -1344,8 +1411,8 @@
             let frameTime = 1000 / 24; // milliseconds per frame at 24 FPS
             let audioFeatures = [];
             let audioBuffer = null;
-            let audioUrl = null;
-            const audioPlayer = document.getElementById('audioPlayer');
+            let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            let audioSource = null;
             
             // Keyframe tracks map
             const keyframeTracks = {
@@ -1402,9 +1469,31 @@
                     const audioModNoise = keyframeTracks.audioModNoise.getValueAtTime(time);
                     const audioModRandom = keyframeTracks.audioModRandom.getValueAtTime(time);
                     
-                    const waveAmp = waveAmpBase * (1 + rms * audioModWave);
-                    const noiseStrength = noiseStrengthBase * (1 + rms * audioModNoise);
-                    const randomStrength = randomStrengthBase * (1 + rms * audioModRandom);
+                    const isAdditive = document.getElementById('audioAdditive').checked;
+                    
+                    let waveAmp;
+                    if (isAdditive) {
+                        waveAmp = waveAmpBase + (rms * audioModWave * 20);
+                        waveAmp = Math.max(0, Math.min(200, waveAmp));
+                    } else {
+                        waveAmp = waveAmpBase * (1 + rms * audioModWave);
+                    }
+                    
+                    let noiseStrength;
+                    if (isAdditive) {
+                        noiseStrength = noiseStrengthBase + (rms * audioModNoise * 10);
+                        noiseStrength = Math.max(0, Math.min(100, noiseStrength));
+                    } else {
+                        noiseStrength = noiseStrengthBase * (1 + rms * audioModNoise);
+                    }
+                    
+                    let randomStrength;
+                    if (isAdditive) {
+                        randomStrength = randomStrengthBase + (rms * audioModRandom * 5);
+                        randomStrength = Math.max(0, Math.min(50, randomStrength));
+                    } else {
+                        randomStrength = randomStrengthBase * (1 + rms * audioModRandom);
+                    }
                     
                     // Wave motion
                     if (document.getElementById('waveEnabled').checked) {
@@ -1494,7 +1583,14 @@
                         rms = audioFeatures[currentFrame];
                     }
                     const audioModSize = keyframeTracks.audioModSize.getValueAtTime(time);
-                    const size = particleSizeBase * (1 + rms * audioModSize);
+                    const isAdditive = document.getElementById('audioAdditive').checked;
+                    let size;
+                    if (isAdditive) {
+                        size = particleSizeBase + (rms * audioModSize * 2);
+                        size = Math.max(1, Math.min(20, size));
+                    } else {
+                        size = particleSizeBase * (1 + rms * audioModSize);
+                    }
                     const color = document.getElementById('particleColor').value;
                     ctx.fillStyle = color;
                     ctx.beginPath();
@@ -1586,76 +1682,80 @@
                 }
             }
             
-            function animateTimer(timestamp) {
+            function animate(timestamp) {
                 if (isPlaying) {
                     if (!lastTime) lastTime = timestamp;
                     
                     const deltaTime = timestamp - lastTime;
                     
+                    // Update frame based on actual FPS
                     if (deltaTime >= frameTime) {
                         currentFrame = (currentFrame + 1) % totalFrames;
                         render();
                         lastTime = timestamp - (deltaTime % frameTime);
                     }
                     
-                    animationId = requestAnimationFrame(animateTimer);
+                    animationId = requestAnimationFrame(animate);
                 }
             }
             
-            function animateAudio() {
-                if (isPlaying && !audioPlayer.paused && !audioPlayer.ended) {
-                    currentFrame = Math.min(Math.floor(audioPlayer.currentTime * fps), totalFrames - 1);
-                    render();
-                    animationId = requestAnimationFrame(animateAudio);
-                } else if (audioPlayer.ended) {
-                    resetAnimation();
+            function startAudio(offset = 0) {
+                if (audioSource) {
+                    audioSource.stop();
+                }
+                if (audioBuffer) {
+                    audioSource = audioCtx.createBufferSource();
+                    audioSource.buffer = audioBuffer;
+                    audioSource.connect(audioCtx.destination);
+                    audioSource.loop = true; // Loop to match animation loop
+                    audioSource.start(0, offset % audioBuffer.duration);
+                }
+            }
+            
+            function stopAudio() {
+                if (audioSource) {
+                    audioSource.stop();
+                    audioSource = null;
+                }
+            }
+            
+            function updateAudioPlayback() {
+                if (audioBuffer) {
+                    const audioTime = (currentFrame / fps) % audioBuffer.duration;
+                    startAudio(audioTime);
                 }
             }
             
             window.togglePlayback = function() {
                 isPlaying = !isPlaying;
-                const playButton = document.querySelector('.playback-bar > .playback-button:first-child');
+                const playButton = document.querySelector('.playback-bar .playback-button:first-child');
                 playButton.textContent = isPlaying ? '⏸ Pause' : '▶ Play';
                 
                 if (isPlaying) {
-                    if (audioUrl) {
-                        audioPlayer.play();
-                        animateAudio();
-                    } else {
-                        lastTime = 0;
-                        animateTimer(performance.now());
-                    }
+                    audioCtx.resume();
+                    lastTime = 0;
+                    animate(0);
+                    updateAudioPlayback();
                 } else {
                     if (animationId) {
                         cancelAnimationFrame(animationId);
                         animationId = null;
                     }
-                    if (audioUrl) {
-                        audioPlayer.pause();
-                    }
+                    stopAudio();
                 }
             }
             
             window.resetAnimation = function() {
                 currentFrame = 0;
                 isPlaying = false;
+                lastTime = 0;
                 if (animationId) {
                     cancelAnimationFrame(animationId);
                     animationId = null;
                 }
-                const playButton = document.querySelector('.playback-bar > .playback-button:first-child');
-                playButton.textContent = '▶ Play';
-                if (audioUrl) {
-                    audioPlayer.currentTime = 0;
-                    audioPlayer.pause();
-                }
+                document.querySelector('.playback-bar .playback-button:first-child').textContent = '▶ Play';
+                stopAudio();
                 render();
-            }
-            
-            function syncAudioToFrame() {
-                if (audioUrl) {
-                    audioPlayer.currentTime = currentFrame / fps;
-                }
             }
             
             window.exportJSON = function() {
@@ -1686,10 +1786,6 @@
                 render();
             }
             
-            window.closeExportModal = function() {
-                document.getElementById('exportModal').style.display = 'none';
-            }
-            
             window.copyToClipboard = function() {
                 const textarea = document.getElementById('exportTextarea');
                 textarea.select();
@@ -1718,7 +1814,6 @@
             }
 
             window.exportFrames = async function() {
-                // Check if JSZip is loaded
                 if (typeof JSZip === 'undefined') {
                     alert('Please wait for the page to fully load and try again.');
                     return;
@@ -1814,189 +1909,6 @@ https://www.nathanshipley.com/`;
                 }
             }
             
-            window.exportMP4 = async function() {
-                if (!window.VideoEncoder || !window.Mp4Muxer) {
-                    alert('WebCodecs API or mp4-muxer not supported in this browser.');
-                    return;
-                }
-                
-                // Create progress indicator
-                const progressDiv = document.createElement('div');
-                progressDiv.style.cssText = 'position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.8); color: white; padding: 20px; border-radius: 8px; z-index: 10000;';
-                progressDiv.innerHTML = '<h3>Exporting MP4...</h3><p id="exportProgress">Preparing...</p>';
-                document.body.appendChild(progressDiv);
-                
-                let originalFrame = currentFrame;
-                let videoEncoder = null;
-                let audioEncoder = null;
-                try {
-                    
-                    const muxer = new Mp4Muxer.Muxer({
-                        target: new Mp4Muxer.ArrayBufferTarget(),
-                        video: {
-                            codec: 'avc',
-                            width: canvasWidth,
-                            height: canvasHeight
-                        },
-                        audio: audioBuffer ? {
-                            codec: 'aac',
-                            numberOfChannels: audioBuffer.numberOfChannels,
-                            sampleRate: audioBuffer.sampleRate
-                        } : undefined,
-                        fastStart: 'in-memory'
-                    });
-                    
-                    videoEncoder = new VideoEncoder({
-                        output: (chunk, meta) => {
-                            console.log('Added video chunk');
-                            muxer.addVideoChunk(chunk, meta);
-                        },
-                        error: (err) => console.error('Video encoding error:', err)
-                    });
-                    videoEncoder.configure({
-                        codec: 'avc1.4d401f',
-                        width: canvasWidth,
-                        height: canvasHeight,
-                        bitrate: 2000000,
-                        framerate: fps
-                    });
-                    
-                    if (videoEncoder.state !== 'configured') {
-                        throw new Error('Video encoder configuration failed');
-                    }
-                    
-                    if (audioBuffer) {
-                        audioEncoder = new AudioEncoder({
-                            output: (chunk, meta) => {
-                                console.log('Added audio chunk');
-                                muxer.addAudioChunk(chunk, meta);
-                            },
-                            error: (err) => console.error('Audio encoding error:', err)
-                        });
-                        audioEncoder.configure({
-                            codec: 'mp4a.40.2',
-                            numberOfChannels: audioBuffer.numberOfChannels,
-                            sampleRate: audioBuffer.sampleRate,
-                            bitrate: 128000
-                        });
-                        
-                        if (audioEncoder.state !== 'configured') {
-                            throw new Error('Audio encoder configuration failed');
-                        }
-                    }
-                    
-                    // Encode video frames
-                    for (let frame = 0; frame < totalFrames; frame++) {
-                        document.getElementById('exportProgress').textContent = `Encoding video frame ${frame + 1} of ${totalFrames}`;
-                        
-                        currentFrame = frame;
-                        render();
-                        
-                        const bitmap = await createImageBitmap(canvas);
-                        const timestamp = (frame / fps) * 1000000; // microseconds
-                        const duration = (1 / fps) * 1000000;
-                        
-                        const videoFrame = new VideoFrame(bitmap, {
-                            timestamp,
-                            duration
-                        });
-                        
-                        videoEncoder.encode(videoFrame, { keyFrame: frame % 30 === 0 });
-                        
-                        videoFrame.close();
-                        bitmap.close();
-                        
-                        // Throttle to prevent queue overflow and allow UI update
-                        while (videoEncoder.encodeQueueSize > 10) {
-                            await new Promise(resolve => setTimeout(resolve, 50));
-                        }
-                        
-                        // Yield to event loop for progress update
-                        await new Promise(resolve => setTimeout(resolve, 0));
-                    }
-                    
-                    await videoEncoder.flush();
-                    
-                    // Encode audio if present
-                    if (audioBuffer) {
-                        document.getElementById('exportProgress').textContent = 'Encoding audio...';
-                        
-                        const audioFrameSize = 1024; // Typical AAC frame size
-                        const numberOfChannels = audioBuffer.numberOfChannels;
-                        const sampleRate = audioBuffer.sampleRate;
-                        const channelDatas = [];
-                        for (let ch = 0; ch < numberOfChannels; ch++) {
-                            channelDatas.push(audioBuffer.getChannelData(ch));
-                        }
-                        
-                        for (let offset = 0; offset < audioBuffer.length; offset += audioFrameSize) {
-                            const frameSize = Math.min(audioFrameSize, audioBuffer.length - offset);
-                            const interleaved = new Float32Array(frameSize * numberOfChannels);
-                            for (let i = 0; i < frameSize; i++) {
-                                for (let ch = 0; ch < numberOfChannels; ch++) {
-                                    interleaved[i * numberOfChannels + ch] = channelDatas[ch][offset + i] || 0;
-                                }
-                            }
-                            
-                            const audioData = new AudioData({
-                                format: 'f32',
-                                sampleRate: sampleRate,
-                                numberOfChannels: numberOfChannels,
-                                numberOfFrames: frameSize,
-                                timestamp: (offset / sampleRate) * 1000000,
-                                data: interleaved
-                            });
-                            
-                            audioEncoder.encode(audioData);
-                            audioData.close();
-                            
-                            // Throttle audio encode queue
-                            while (audioEncoder.encodeQueueSize > 10) {
-                                await new Promise(resolve => setTimeout(resolve, 50));
-                            }
-                        }
-                        
-                        await audioEncoder.flush();
-                    }
-                    
-                    document.getElementById('exportProgress').textContent = 'Finalizing MP4...';
-                    muxer.finalize();
-                    const buffer = muxer.target.buffer;
-                    
-                    if (!buffer || buffer.byteLength < 100) {
-                        throw new Error('Empty or invalid MP4 file generated.');
-                    }
-                    
-                    const blob = new Blob([buffer], { type: 'video/mp4' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = 'particle_animation.mp4';
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    
-                    currentFrame = originalFrame;
-                    render();
-                    
-                    document.body.removeChild(progressDiv);
-                    
-                } catch (error) {
-                    console.error('Error exporting MP4:', error);
-                    alert('Error exporting MP4. Check console for details.');
-                    document.body.removeChild(progressDiv);
-                    currentFrame = originalFrame;
-                    render();
-                } finally {
-                    // Clean up encoders
-                    if (videoEncoder && videoEncoder.state !== 'closed') {
-                        videoEncoder.close();
-                    }
-                    if (audioEncoder && audioEncoder.state !== 'closed') {
-                        audioEncoder.close();
-                    }
-                }
-            }
-            
             // Timeline functions
             function updateTimeline() {
                 const ruler = document.querySelector('.timeline-numbers');
@@ -2020,7 +1932,7 @@ https://www.nathanshipley.com/`;
                 // Update CSS variable for global playhead line
                 const container = document.querySelector('.timeline-container');
                 if (container) {
-                    const timelineWidth = container.offsetWidth - 262; // subtract left margin
+                    const timelineWidth = Math.max(0, container.offsetWidth - 262);
                     container.style.setProperty('--playhead-position', (progress * timelineWidth) + 'px');
                 }
             }
@@ -2077,7 +1989,7 @@ https://www.nathanshipley.com/`;
                     const x = e.clientX - rect.left;
                     const progress = Math.max(0, Math.min(1, x / rect.width));
                     currentFrame = Math.floor(progress * totalFrames);
-                    syncAudioToFrame();
+                    updateAudioPlayback();
                     render();
                 };
                 
@@ -2098,7 +2010,7 @@ https://www.nathanshipley.com/`;
                 const x = event.clientX - rect.left;
                 const progress = Math.max(0, Math.min(1, x / rect.width));
                 currentFrame = Math.floor(progress * totalFrames);
-                syncAudioToFrame();
+                updateAudioPlayback();
                 render();
             }
             
@@ -2160,13 +2072,21 @@ https://www.nathanshipley.com/`;
                     // Make keyframe draggable
                     kfElement.addEventListener('mousedown', startDragKeyframe);
                     
-                    // Right click to delete
+                    // Right click for menu
                     kfElement.addEventListener('contextmenu', (e) => {
-                        e.preventDefault();
-                        track.removeKeyframe(index);
-                        updateKeyframeDisplay(paramId);
-                        updateKeyframeButtons();
-                        render();
+                        showKeyframeMenu(e, paramId, index);
+                    });
+                    
+                    // Double click to edit value
+                    kfElement.addEventListener('dblclick', (e) => {
+                        const kf = track.keyframes[index];
+                        const newValue = prompt(`Enter new value (${track.min}-${track.max}):`, kf.value);
+                        if (newValue !== null) {
+                            let val = parseFloat(newValue);
+                            val = Math.max(track.min, Math.min(track.max, val));
+                            kf.value = val;
+                            render();
+                        }
                     });
                     
                     container.appendChild(kfElement);
@@ -2178,6 +2098,99 @@ https://www.nathanshipley.com/`;
                     updateKeyframeDisplay(paramId);
                 }
                 updateKeyframeButtons();
+            }
+            
+            let currentMenu = null;
+            
+            function showKeyframeMenu(e, paramId, index) {
+                e.preventDefault();
+                if (currentMenu) currentMenu.remove();
+                
+                const menu = document.createElement('div');
+                menu.style.position = 'absolute';
+                menu.style.left = `${e.pageX}px`;
+                menu.style.top = `${e.pageY}px`;
+                menu.style.background = '#333';
+                menu.style.border = '1px solid #444';
+                menu.style.padding = '5px';
+                menu.style.zIndex = 1000;
+                menu.style.display = 'flex';
+                menu.style.flexDirection = 'column';
+                menu.style.gap = '5px';
+                
+                const track = keyframeTracks[paramId];
+                const kf = track.keyframes[index];
+                
+                // Edit Value
+                const editBtn = document.createElement('button');
+                editBtn.textContent = 'Edit Value';
+                editBtn.style.background = 'none';
+                editBtn.style.border = 'none';
+                editBtn.style.color = '#e0e0e0';
+                editBtn.style.cursor = 'pointer';
+                editBtn.style.textAlign = 'left';
+                editBtn.style.padding = '2px 8px';
+                editBtn.onclick = () => {
+                    const newValue = prompt(`Enter new value (${track.min}-${track.max}):`, kf.value);
+                    if (newValue !== null) {
+                        let val = parseFloat(newValue);
+                        val = Math.max(track.min, Math.min(track.max, val));
+                        kf.value = val;
+                        render();
+                    }
+                    menu.remove();
+                };
+                menu.appendChild(editBtn);
+                
+                // Set Easing
+                const easingBtn = document.createElement('button');
+                easingBtn.textContent = 'Set Easing';
+                easingBtn.style.background = 'none';
+                easingBtn.style.border = 'none';
+                easingBtn.style.color = '#e0e0e0';
+                easingBtn.style.cursor = 'pointer';
+                easingBtn.style.textAlign = 'left';
+                easingBtn.style.padding = '2px 8px';
+                easingBtn.onclick = () => {
+                    const easingTypes = Object.keys(easingFunctions).join(', ');
+                    const easing = prompt(`Enter easing type (${easingTypes}):`, kf.easing);
+                    if (easing && easingFunctions[easing]) {
+                        kf.easing = easing;
+                        render();
+                    }
+                    menu.remove();
+                };
+                menu.appendChild(easingBtn);
+                
+                // Delete
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.style.background = 'none';
+                deleteBtn.style.border = 'none';
+                deleteBtn.style.color = '#e0e0e0';
+                deleteBtn.style.cursor = 'pointer';
+                deleteBtn.style.textAlign = 'left';
+                deleteBtn.style.padding = '2px 8px';
+                deleteBtn.onclick = () => {
+                    track.removeKeyframe(index);
+                    updateKeyframeDisplay(paramId);
+                    updateKeyframeButtons();
+                    render();
+                    menu.remove();
+                };
+                menu.appendChild(deleteBtn);
+                
+                document.body.appendChild(menu);
+                currentMenu = menu;
+                
+                // Close on click outside
+                const closeListener = (ev) => {
+                    if (!menu.contains(ev.target)) {
+                        menu.remove();
+                        document.removeEventListener('click', closeListener);
+                    }
+                };
+                document.addEventListener('click', closeListener);
             }
             
             let draggedKeyframe = null;
@@ -2508,19 +2521,17 @@ https://www.nathanshipley.com/`;
                 if (!file) return;
                 
                 try {
-                    audioUrl = URL.createObjectURL(file);
-                    audioPlayer.src = audioUrl;
-                    
                     const arrayBuffer = await file.arrayBuffer();
-                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                     audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
                     
                     // Update duration to match audio
-                    document.getElementById('duration').value = audioBuffer.duration.toFixed(3);
+                    document.getElementById('duration').value = audioBuffer.duration.toFixed(1);
                     updateCanvasSettings();
                     
                     // Compute features
                     computeAudioFeatures(audioBuffer);
+                    
+                    document.getElementById('audioSettingsBtn').disabled = false;
                     
                     alert('Audio loaded: ' + file.name);
                     render();
@@ -2529,8 +2540,6 @@ https://www.nathanshipley.com/`;
                     alert('Error loading audio file.');
                 }
             });
-            
-            audioPlayer.addEventListener('ended', resetAnimation);
             
             function computeAudioFeatures(buffer) {
                 const channelData = buffer.getChannelData(0); // Use first channel (mono)
