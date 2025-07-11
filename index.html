@@ -2129,7 +2129,7 @@ https://www.nathanshipley.com/`;
                     
                     const originalFrame = currentFrame;
                     
-                    let muxer = new Mp4Muxer.Muxer({
+                    let muxerConfig = {
                         target: new Mp4Muxer.ArrayBufferTarget(),
                         video: {
                             codec: 'avc',
@@ -2137,7 +2137,17 @@ https://www.nathanshipley.com/`;
                             height: canvasHeight
                         },
                         fastStart: 'in-memory'
-                    });
+                    };
+                    
+                    if (audioBuffer) {
+                        muxerConfig.audio = {
+                            codec: 'aac',
+                            numberOfChannels: audioBuffer.numberOfChannels,
+                            sampleRate: audioBuffer.sampleRate
+                        };
+                    }
+                    
+                    let muxer = new Mp4Muxer.Muxer(muxerConfig);
                     
                     let videoEncoder = new VideoEncoder({
                         output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
@@ -2151,10 +2161,29 @@ https://www.nathanshipley.com/`;
                         codec: 'avc1.42001f',
                         width: canvasWidth,
                         height: canvasHeight,
-                        bitrate: 1_000_000,  // Adjust as needed
+                        bitrate: 4_000_000,  // Increased bitrate for better quality
                         bitrateMode: 'constant'
                     });
                     
+                    let audioEncoder;
+                    if (audioBuffer) {
+                        audioEncoder = new AudioEncoder({
+                            output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+                            error: (e) => {
+                                console.error(e);
+                                alert('Error during audio encoding: ' + e.message);
+                            }
+                        });
+                        
+                        audioEncoder.configure({
+                            codec: 'mp4a.40.2',
+                            numberOfChannels: audioBuffer.numberOfChannels,
+                            sampleRate: audioBuffer.sampleRate,
+                            bitrate: 128_000
+                        });
+                    }
+                    
+                    // Encode video frames
                     for (let frame = 0; frame < totalFrames; frame++) {
                         document.getElementById('exportProgress').textContent = `Processing frame ${frame + 1} of ${totalFrames}`;
                         
@@ -2181,6 +2210,35 @@ https://www.nathanshipley.com/`;
                     }
                     
                     await videoEncoder.flush();
+                    
+                    // Encode audio if present
+                    if (audioBuffer) {
+                        // Function to create planar data
+                        function createPlanarData(buffer) {
+                            const numChannels = buffer.numberOfChannels;
+                            const length = buffer.length;
+                            const data = new Float32Array(length * numChannels);
+                            for (let ch = 0; ch < numChannels; ch++) {
+                                data.set(buffer.getChannelData(ch), ch * length);
+                            }
+                            return data;
+                        }
+                        
+                        const planarData = createPlanarData(audioBuffer);
+                        
+                        const audioData = new AudioData({
+                            format: 'f32-planar',
+                            sampleRate: audioBuffer.sampleRate,
+                            numberOfFrames: audioBuffer.length,
+                            numberOfChannels: audioBuffer.numberOfChannels,
+                            timestamp: 0,
+                            data: planarData
+                        });
+                        
+                        audioEncoder.encode(audioData);
+                        
+                        await audioEncoder.flush();
+                    }
                     
                     muxer.finalize();
                     
